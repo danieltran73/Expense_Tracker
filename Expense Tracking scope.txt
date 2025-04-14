@@ -1,0 +1,36 @@
+Current effort:
+- line 73: viewing the individual expense and its values
+
+Weekly Expense details:
+- Date (of creation)
+- Weekly Amount (calculation from Expense amount)
+
+Expense details:
+- Name
+- Amount
+- Current Budget (Sum of weekly budget)
+- Start date
+- Frequency
+- Interval
+- Count of weekly budget
+
+Expense Tracking scope:
+- Add and remove expenses 
+	- Name
+	- Amount
+	- Recursion type (some amount of day, weekly, monthly)
+	- Recursion frequency (whole integer)
+- Save the details of expenses in excel sheets
+- Calculation:
+	- Calculate the total budget to have
+	- Calculate the weekly budget for each expense/subscription
+	- Keep track of how many weekly budget each expense/subscription has
+	- Subtract the expense/subscription based on the whole frequency
+	- Subtract the expense/subscription based on the weekly budget
+
+Expense log
+- Add to history log whenever the payment is made
+- View different expenses and its history log
+
+User experience 
+
