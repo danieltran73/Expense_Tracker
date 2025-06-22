@@ -1,5 +1,6 @@
 Current effort:
-- line 73: viewing the individual expense and its values
+- Add a way to do payment
+- Create a log of any addition or removal of weekly expenses - saving them into a csv
 
 Weekly Expense details:
 - Date (of creation)
@@ -13,6 +14,13 @@ Expense details:
 - Frequency
 - Interval
 - Count of weekly budget
+
+Expense functions:
+- Add weekly expenses
+- Pay weekly expenses (choice of one or all)
+- Summarise weekly expenses:
+	- Current budget
+	- Weekly amount
 
 Expense Tracking scope:
 - Add and remove expenses 

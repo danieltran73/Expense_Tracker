@@ -10,7 +10,7 @@ class Expense_Tracker:
 
     def remove_expense(self, index):
         if 0 <= index < len(self.expenses):
-            del self.expense[index]
+            del self.expenses[index]
             print("Expense removed successfully.") # Stylise to have the name printed
         else:
             print("Invalid expense index.")
