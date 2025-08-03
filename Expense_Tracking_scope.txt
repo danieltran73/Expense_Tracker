@@ -1,5 +1,6 @@
 Current effort:
 - Deal with more entry error
-- Create a log of any addition or removal of weekly expenses, and weekly increment - saving them into a csv
-- Add more features to make certain changes e.g. changing the number of counter by a lot
+- Logging individual data record
+- Saving weekly records to txt files, separated into months
+- Add feature to edit the expenses
 - Make UX/UI

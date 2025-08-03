@@ -1,4 +1,5 @@
 import sqlite3
+import logging
 
 """Smaller functions"""
 
@@ -89,18 +90,16 @@ def total_expense(connection) -> str:
         print(e)
 
 # Increment counters
-"""
-- Alter all counter by one with a confirming message and 
-quick list of expenses and their counter
-"""
-
 def increment_one_counter(connection, expense_id:int) -> None: 
-    query = "UPDATE expenses SET counter = counter + 1 WHERE id = ?"
+    query_1 = "UPDATE expenses SET counter = counter + 1 WHERE id = ?"
+    query_2 = "SELECT name WHERE id = ?"
 
     try:
         with connection:
-            connection.execute(query, (expense_id,))
-        print("\nCounter is incremented by 1.")
+            connection.execute(query_1, (expense_id,))
+            name = connection.execute(query_2, (expense_id,)).fetchone()[0]
+        print(f"\nCounter {name} is incremented by 1.")
+        # logging.info(f"Counter {name} is incremented by 1.")
     except Exception as e:
         print(e)
 
@@ -129,6 +128,14 @@ def pay_expense(connection, expense_id:int) -> None:
 
 # Main Function
 def main():
+    # Initialise logging
+    logging.basicConfig(filename='weekly_logs.log',
+                        format='%(asctime)s: %(message)s',
+                        datefmt='%Y/%m/%d %H:%M:%S %p',
+                        level=logging.INFO,)
+    
+    logging.info("The log is initialised!")
+    
     connection = get_connection("expense_tracker.db")
 
     try:
