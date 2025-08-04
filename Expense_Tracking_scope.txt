@@ -1,6 +1,25 @@
 Current effort:
-- Deal with more entry error
+- Saving weekly records to txt files
 - Logging individual data record
-- Saving weekly records to txt files, separated into months
+- Deal with more entry error
 - Add feature to edit the expenses
 - Make UX/UI
+
+Logging/recording scope:
+- Separate summary text files and weekly individual csv files, organised into months
+- Text files consist of weekly summary
+- Csv file consist of individual changes with the amount of the month
+- Text files are put into a folder, with title from starting date to ending date of the weekly
+- Csv file is one single csv file, separated into year
+- Folder nest:
+    - Log files folder
+        - Year folder
+            - Text files folder
+            - One csv file
+
+Logging/recording process
+- Create year folder if non existent whenever a change in the database happen
+- Write into csv file all individual increments and deductions
+- Whenever increment all, save 'increment_all' outputs to a text file
+
+CSV file data record format: Time, Date, Message, Amount
