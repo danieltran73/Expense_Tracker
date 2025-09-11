@@ -164,7 +164,9 @@ def increment_all_counters(connection) -> None:
     try:
         with connection:
             connection.execute(query)
-        print("\nAll counters are incremented by 1.")
+        total = total_expense(connection)
+        print(f"\nAll counters are incremented by 1.\nTotal budget: ${total:.2f}")
+        logging.info(f"\nAll counters are incremented by 1. Total budget: ${total:.2f}")
     except Exception as e:
         print(e)
 
