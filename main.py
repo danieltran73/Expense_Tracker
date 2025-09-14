@@ -22,21 +22,22 @@ def convert_frequency(frequency: str) -> int:
         
 
 """Logging/Data recording functions"""
-# Check if the log folder exists, if not create it
-def check_log_folder() -> str:
-    log_folder = "logs"
-    if not os.path.exists(log_folder):
-        os.makedirs(log_folder)
-        print(f"Log folder '{log_folder}' created.")
-    return log_folder
+
+# # Check if the log folder exists, if not create it
+# def check_log_folder() -> str:
+#     log_folder = "logs"
+#     if not os.path.exists(log_folder):
+#         os.makedirs(log_folder)
+#         print(f"Log folder '{log_folder}' created.")
+#     return log_folder
 
 # Check if the year folder exists, if not create it
-def check_year_folder(year: int) -> str:
+def check_year_folder(year: int) -> None:
     year_folder = os.path.join("logs", str(year))
     if not os.path.exists(year_folder):
         os.makedirs(year_folder)
         print(f"Year folder '{year}' created in logs.")
-    return year_folder
+    return None
 
 # Check if the text folder exists, if not create it
 def check_text_folder(year: int) -> str:
@@ -48,8 +49,9 @@ def check_text_folder(year: int) -> str:
 
 # Check if the csv file exists, if not create it
 def check_csv_file(year: int) -> str:
-    csv_file = os.path.join("logs", year, "expenses-{year}.csv")
+    csv_file = os.path.join("logs", str(year), f"expenses-{year}.csv")
     if not os.path.exists(csv_file):
+        check_year_folder(year)
         with open(csv_file, 'w') as csv_file:
             fieldnames = ['Date', 'Day_of_the_week', 'Changed_object', 'Change_type', 
                           'Changed_amount', 'Current_total', 'Message']
@@ -57,16 +59,18 @@ def check_csv_file(year: int) -> str:
             writer.writeheader()
             print(f"CSV file '{csv_file}' created with headers.")
     return csv_file
+
 # Write csv lines
-def write_csv_line(csv_file: str, current_date: datetime, day_of_the_week: str, 
-                   changed_object: str, changed_type: str, changed_amount: float, 
-                   current_total: float, message: str) -> None:
+def write_csv_line(changed_object: str, changed_type: str, 
+                   changed_amount: float, current_total: float, message: str) -> None:
     try:
+        today = datetime.now()
+        csv_file = check_csv_file(today.strftime("%Y"))
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([current_date.strftime("%Y/%m/%d"), day_of_the_week, changed_object, 
+            writer.writerow([today.strftime("%Y/%m/%d"), today.strftime("%A"), changed_object, 
                              changed_type, f"${changed_amount:.2f}", f"${current_total:.2f}", message])
-        print(f"CSV line written: {current_date.strftime('%Y/%m/%d')} - {changed_object} - {changed_type} - ${changed_amount:.2f}")
+        print(f"CSV line written: {today.strftime('%Y/%m/%d')} - {changed_object} - {changed_type} - ${changed_amount:.2f}")
     except Exception as e:
         print(f"Error writing to CSV file: {e}")
     return None
@@ -147,14 +151,18 @@ def total_expense(connection) -> str:
 # Increment counters
 def increment_one_counter(connection, expense_id:int) -> None: 
     query_1 = "UPDATE expenses SET counter = counter + 1 WHERE id = ?"
-    query_2 = "SELECT name FROM expenses WHERE id = ?"
+    query_2 = "SELECT name, (CAST(price AS REAL) / CAST(week_ratio AS REAL)), ((CAST(price AS REAL) / CAST(week_ratio AS REAL)) * counter) FROM expenses WHERE id = ?"
 
     try:
         with connection:
             connection.execute(query_1, (expense_id,))
-            name = connection.execute(query_2, (expense_id,)).fetchone()[0]
+            selection = connection.execute(query_2, (expense_id,))
+            name = selection.fetchone()[0]
+            amount = selection.fetchone()[1]
+            total = selection.fetchone()[2]
         print(f"\nCounter {name} is incremented by 1.")
         logging.info(f"Counter {name} is incremented by 1.")
+        write_csv_line(name, "Single Increment", amount, total, "Counter {name} is incremented by 1.")
     except Exception as e:
         print(e)
 
@@ -193,7 +201,7 @@ def main():
                         format='%(asctime)s: %(message)s',
                         datefmt='%Y/%m/%d %H:%M:%S',
                         level=logging.INFO,)
-    
+
     connection = get_connection("expense_tracker.db")
 
     try:
