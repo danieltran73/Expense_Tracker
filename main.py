@@ -49,16 +49,16 @@ def check_text_folder(year: int) -> str:
 
 # Check if the csv file exists, if not create it
 def check_csv_file(year: int) -> str:
-    csv_file = os.path.join("logs", str(year), f"expenses-{year}.csv")
-    if not os.path.exists(csv_file):
+    csv_file_path = os.path.join("logs", str(year), f"expenses-{year}.csv")
+    if not os.path.exists(csv_file_path):
         check_year_folder(year)
-        with open(csv_file, 'w') as csv_file:
+        with open(csv_file_path, 'w') as file:
             fieldnames = ['Date', 'Day_of_the_week', 'Changed_object', 'Change_type', 
                           'Changed_amount', 'Current_total', 'Message']
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
-            print(f"CSV file '{csv_file}' created with headers.")
-    return csv_file
+            print(f"CSV file '{file}' created with headers.")
+    return csv_file_path
 
 # Write csv lines
 def write_csv_line(changed_object: str, changed_type: str, 
@@ -157,24 +157,29 @@ def increment_one_counter(connection, expense_id:int) -> None:
         with connection:
             connection.execute(query_1, (expense_id,))
             selection = connection.execute(query_2, (expense_id,))
-            name = selection.fetchone()[0]
-            amount = selection.fetchone()[1]
-            total = selection.fetchone()[2]
+            row = selection.fetchone()
+            if row is None:
+                print(f"No expense found with ID: {expense_id}")
+                return
+            name = row[0]
+            amount = row[1]
+            total = row[2]
         print(f"\nCounter {name} is incremented by 1.")
-        logging.info(f"Counter {name} is incremented by 1.")
-        write_csv_line(name, "Single Increment", amount, total, "Counter {name} is incremented by 1.")
+        write_csv_line(name, "Single Increment", amount, total, f"Counter {name} is incremented by 1.")
     except Exception as e:
         print(e)
 
 def increment_all_counters(connection) -> None:
-    query = "UPDATE expenses SET counter = counter + 1"
+    query_1 = "UPDATE expenses SET counter = counter + 1"
+    query_2 = "SELECT SUM(CAST(price AS REAL) / CAST(week_ratio AS REAL)) FROM expenses"
 
     try:
         with connection:
-            connection.execute(query)
+            connection.execute(query_1)
+            changed_amount = connection.execute(query_2).fetchone()[0]
         total = total_expense(connection)
         print(f"\nAll counters are incremented by 1.\nTotal budget: ${total:.2f}")
-        logging.info(f"\nAll counters are incremented by 1. Total budget: ${total:.2f}")
+        write_csv_line("All Expenses", "Weekly Increment", changed_amount, total, "All counters are incremented by 1.")
     except Exception as e:
         print(e)
 
@@ -190,17 +195,16 @@ def pay_expense(connection, expense_id:int) -> None:
             bill = connection.execute(query_1, (expense_id,)).fetchone()[2]
             print(f"\n${bill} has been paid for {name}")
             connection.execute(query_2, (expense_id,))
-        logging.info(f"${bill} has been paid for {name}. Counter change from {counter} to 0.")
     except Exception as e:
         print(e)
 
 # Main Function
 def main():
     # Initialise logging
-    logging.basicConfig(filename='weekly_logs.log',
-                        format='%(asctime)s: %(message)s',
-                        datefmt='%Y/%m/%d %H:%M:%S',
-                        level=logging.INFO,)
+    # logging.basicConfig(filename='weekly_logs.log',
+    #                     format='%(asctime)s: %(message)s',
+    #                     datefmt='%Y/%m/%d %H:%M:%S',
+    #                     level=logging.INFO,)
 
     connection = get_connection("expense_tracker.db")
 
