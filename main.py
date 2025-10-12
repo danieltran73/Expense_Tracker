@@ -1,5 +1,4 @@
 import sqlite3
-import logging
 import os
 import csv
 from datetime import datetime
@@ -156,8 +155,7 @@ def increment_one_counter(connection, expense_id:int) -> None:
     try:
         with connection:
             connection.execute(query_1, (expense_id,))
-            selection = connection.execute(query_2, (expense_id,))
-            row = selection.fetchone()
+            row = connection.execute(query_2, (expense_id,)).fetchone()
             if row is None:
                 print(f"No expense found with ID: {expense_id}")
                 return
@@ -190,9 +188,13 @@ def pay_expense(connection, expense_id:int) -> None:
     query_2 = "UPDATE expenses SET counter = 0 WHERE id = ?"
     try:
         with connection:
-            name = connection.execute(query_1, (expense_id,)).fetchone()[0]
-            counter = connection.execute(query_1, (expense_id,)).fetchone()[1]
-            bill = connection.execute(query_1, (expense_id,)).fetchone()[2]
+            row = connection.execute(query_1, (expense_id,)).fetchone()
+            if row is None:
+                print(f"No expense found with ID: {expense_id}")
+                return
+            name = row[0]
+            counter = row[1]
+            bill = row[2]
             print(f"\n${bill} has been paid for {name}")
             connection.execute(query_2, (expense_id,))
     except Exception as e:
@@ -200,11 +202,6 @@ def pay_expense(connection, expense_id:int) -> None:
 
 # Main Function
 def main():
-    # Initialise logging
-    # logging.basicConfig(filename='weekly_logs.log',
-    #                     format='%(asctime)s: %(message)s',
-    #                     datefmt='%Y/%m/%d %H:%M:%S',
-    #                     level=logging.INFO,)
 
     connection = get_connection("expense_tracker.db")
 
