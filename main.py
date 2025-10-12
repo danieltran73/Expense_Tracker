@@ -58,14 +58,14 @@ def insert_expense(connection, name: str, price: float, frequency: str, week_rat
 # Edit expense
 def edit_expense(connection, expense_id: int) -> None:
     query_1 = "SELECT name, price, frequency FROM expenses WHERE id = ?"
-    query_2 = "UPDATE expenses SET (name, price, frequency, week_ratio) VALUES (?, ?, ?, ?) WHERE id = ?"
+    query_2 = "UPDATE expenses SET name = ?, price = ?, frequency = ?, week_ratio = ? WHERE id = ?"
     try:
         with connection:
-            row = connection.execute(query_1, (expense_id,)).fetchall()
+            row = connection.execute(query_1, (expense_id,)).fetchall()[0]
             for detail in row:
-                new_detail = input("Please enter change (current: {detail}; press enter if no change): " or detail)
+                new_detail = input(f"Please enter change (current: {detail}; press enter if no change): " or detail)
                 detail = new_detail
-            connection.execute(query_2, (row[0], row[1], row[2], convert_frequency(row[2]), expense_id,))
+            connection.execute(query_2, (row[0], float(row[1]), row[2], convert_frequency(row[2]), expense_id,))
         print(f"Expense id: {expense_id} has been updated!\nName: {row[0]} - Price: ${row[1]} - Frequency: {row[2]}")
     except Exception as e:
         print(e)
