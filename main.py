@@ -211,8 +211,10 @@ def pay_expense(connection, expense_id:int) -> None:
             name = row[0]
             counter = row[1]
             bill = row[2]
-            print(f"\n${bill} has been paid for {name}")
+            print(f"\n${bill} - {counter} counters has been paid for {name}")
             connection.execute(query_2, (expense_id,))
+            write_csv_line(name, "Payment", bill, 0, f"${bill} - {counter} counters has been paid for {name}")
+
     except Exception as e:
         print(e)
 
