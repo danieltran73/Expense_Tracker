@@ -1,4 +1,7 @@
 import sqlite3
+import os
+import csv
+from datetime import datetime
 
 """Smaller functions"""
 
@@ -16,6 +19,62 @@ def convert_frequency(frequency: str) -> int:
         case _:
             raise ValueError(f"Unsupported frequency: {frequency}")
         
+
+"""Logging/Data recording functions"""
+
+# # Check if the log folder exists, if not create it
+# def check_log_folder() -> str:
+#     log_folder = "logs"
+#     if not os.path.exists(log_folder):
+#         os.makedirs(log_folder)
+#         print(f"Log folder '{log_folder}' created.")
+#     return log_folder
+
+# Check if the year folder exists, if not create it
+def check_year_folder(year: int) -> None:
+    year_folder = os.path.join("logs", str(year))
+    if not os.path.exists(year_folder):
+        os.makedirs(year_folder)
+        print(f"Year folder '{year}' created in logs.")
+    return None
+
+# Check if the text folder exists, if not create it
+def check_text_folder(year: int) -> str:
+    text_folder = os.path.join("logs", str(year), "text_files")
+    if not os.path.exists(text_folder):
+        os.makedirs(text_folder)
+        print(f"Text folder '{text_folder}' created in logs/{year}.")
+    return text_folder
+
+# Check if the csv file exists, if not create it
+def check_csv_file(year: int) -> str:
+    csv_file_path = os.path.join("logs", str(year), f"expenses-{year}.csv")
+    if not os.path.exists(csv_file_path):
+        check_year_folder(year)
+        with open(csv_file_path, 'w') as file:
+            fieldnames = ['Date', 'Day_of_the_week', 'Changed_object', 'Change_type', 
+                          'Changed_amount', 'Current_total', 'Message']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            print(f"CSV file '{file}' created with headers.")
+    return csv_file_path
+
+# Write csv lines
+def write_csv_line(changed_object: str, changed_type: str, 
+                   changed_amount: float, current_total: float, message: str) -> None:
+    try:
+        today = datetime.now()
+        csv_file = check_csv_file(today.strftime("%Y"))
+        with open(csv_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([today.strftime("%Y/%m/%d"), today.strftime("%A"), changed_object, 
+                             changed_type, f"${changed_amount:.2f}", f"${current_total:.2f}", message])
+        print(f"CSV line written: {today.strftime('%Y/%m/%d')} - {changed_object} - {changed_type} - ${changed_amount:.2f}")
+    except Exception as e:
+        print(f"Error writing to CSV file: {e}")
+    return None
+
+# Write weekly summary text files with title from starting date to ending date of the current week
 
 """Database functions"""
 # Initialize database
@@ -105,46 +164,61 @@ def total_expense(connection) -> str:
         print(e)
 
 # Increment counters
-"""
-- Alter all counter by one with a confirming message and 
-quick list of expenses and their counter
-"""
-
 def increment_one_counter(connection, expense_id:int) -> None: 
-    query = "UPDATE expenses SET counter = counter + 1 WHERE id = ?"
+    query_1 = "UPDATE expenses SET counter = counter + 1 WHERE id = ?"
+    query_2 = "SELECT name, (CAST(price AS REAL) / CAST(week_ratio AS REAL)), ((CAST(price AS REAL) / CAST(week_ratio AS REAL)) * counter) FROM expenses WHERE id = ?"
 
     try:
         with connection:
-            connection.execute(query, (expense_id,))
-        print("\nCounter is incremented by 1.")
+            connection.execute(query_1, (expense_id,))
+            row = connection.execute(query_2, (expense_id,)).fetchone()
+            if row is None:
+                print(f"No expense found with ID: {expense_id}")
+                return
+            name = row[0]
+            amount = row[1]
+            total = row[2]
+        print(f"\nCounter {name} is incremented by 1.")
+        write_csv_line(name, "Single Increment", amount, total, f"Counter {name} is incremented by 1.")
     except Exception as e:
         print(e)
 
 def increment_all_counters(connection) -> None:
-    query = "UPDATE expenses SET counter = counter + 1"
+    query_1 = "UPDATE expenses SET counter = counter + 1"
+    query_2 = "SELECT SUM(CAST(price AS REAL) / CAST(week_ratio AS REAL)) FROM expenses"
 
     try:
         with connection:
-            connection.execute(query)
-        print("\nAll counters are incremented by 1.")
+            connection.execute(query_1)
+            changed_amount = connection.execute(query_2).fetchone()[0]
+        total = total_expense(connection)
+        print(f"\nAll counters are incremented by 1.\nTotal budget: ${total:.2f}")
+        write_csv_line("All Expenses", "Weekly Increment", changed_amount, total, "All counters are incremented by 1.")
     except Exception as e:
         print(e)
 
 # Decrement counters
 
 def pay_expense(connection, expense_id:int) -> None:
-    query_1 = "SELECT SUM((CAST(price AS REAL) / CAST(week_ratio AS REAL)) * counter) FROM expenses WHERE id = ?"
+    query_1 = "SELECT name, counter, SUM((CAST(price AS REAL) / CAST(week_ratio AS REAL)) * counter) FROM expenses WHERE id = ?"
     query_2 = "UPDATE expenses SET counter = 0 WHERE id = ?"
     try:
         with connection:
-            bill = connection.execute(query_1, (expense_id,)).fetchone()[0]
-            print(f"\n${bill} has been paid for expense id {expense_id}.")
+            row = connection.execute(query_1, (expense_id,)).fetchone()
+            if row is None:
+                print(f"No expense found with ID: {expense_id}")
+                return
+            name = row[0]
+            counter = row[1]
+            bill = row[2]
+            print(f"\n${bill} has been paid for {name}")
             connection.execute(query_2, (expense_id,))
     except Exception as e:
         print(e)
 
 # Main Function
 def main():
+
     connection = get_connection("expense_tracker.db")
 
     try:
@@ -188,21 +262,25 @@ def main():
                 delete_expense(connection, expense_id)
 
             elif start_input == "increment":
-                choice_input = input("Whould you like to increment 'one' or 'all' expenses?: ").lower()
-                match choice_input:
-                    case "one":
-                        id_input = int(input("Enter expense id: "))
-                        increment_one_counter(connection, id_input)
-                    case "all":
-                        increment_all_counters(connection)
-                        total_expense(connection)
-                    case _:
-                        raise ValueError(f"Unsupported choice: {choice_input}")
-                        break
+                while True:
+                    try:
+                        choice_input = input("Would you like to increment 'one' or 'all' expenses?: ").lower()
+                        match choice_input:
+                            case "one":
+                                id_input = int(input("Enter expense id: "))
+                                increment_one_counter(connection, id_input)
+                            case "all":
+                                increment_all_counters(connection)
+                                total_expense(connection)
+                            case _:
+                                raise ValueError
                         
-                for expense in fetch_expenses(connection):
-                    print(expense)
-
+                        for expense in fetch_expenses(connection):
+                            print(expense)
+                        break
+                    except ValueError:
+                        print("Invalid choice! Please enter either 'one' or 'all'.")
+                
             elif start_input == "pay":
                 expense_id = int(input("Enter expense id: "))
                 pay_expense(connection, expense_id)
