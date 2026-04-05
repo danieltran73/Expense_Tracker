@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 """Smaller functions"""
 
@@ -40,11 +40,30 @@ def check_year_folder(year: int) -> None:
 
 # Check if the text folder exists, if not create it
 def check_text_folder(year: int) -> str:
-    text_folder = os.path.join("logs", str(year), "text_files")
+    text_folder = os.path.join("logs", str(year), "weekly_summaries")
     if not os.path.exists(text_folder):
         os.makedirs(text_folder)
         print(f"Text folder '{text_folder}' created in logs/{year}.")
     return text_folder
+
+def check_text_file() -> str:
+    today = datetime.now()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    year = today.strftime("%Y")
+    text_folder = check_text_folder(int(year))
+    text_file_path = os.path.join(text_folder, f"{start_of_week.strftime('%Y-%m-%d')}~{end_of_week.strftime('%Y-%m-%d')}.txt")
+    return text_file_path
+
+def write_text_file(content: str) -> None:
+    text_file_path = check_text_file()
+    try:
+        with open(text_file_path, 'w') as file:
+            file.write(content)
+    except Exception as e:
+        print(f"Error writing text file: {e}")
+        return
+    return None
 
 # Check if the csv file exists, if not create it
 def check_csv_file(year: int) -> str:
@@ -213,7 +232,7 @@ def pay_expense(connection, expense_id:int) -> None:
             bill = row[2]
             print(f"\n${bill} - {counter} counters has been paid for {name}")
             connection.execute(query_2, (expense_id,))
-            write_csv_line(name, "Payment", bill, 0, f"${bill} - {counter} counters has been paid for {name}")
+            write_csv_line(name, "Payment", bill, 0, f"-${bill} - {counter} counters has been paid for {name}")
 
     except Exception as e:
         print(e)
@@ -274,6 +293,13 @@ def main():
                             case "all":
                                 increment_all_counters(connection)
                                 total_expense(connection)
+
+                                # Write weekly summary text file
+                                content = "Weekly Starting Summary:\n\n"
+                                for expense in fetch_expenses(connection):
+                                    content += f"Expense: {expense[1]} - Price: ${expense[2]:.2f} - Frequency: {expense[3]} - Counter: {expense[4]}\n"
+                                write_text_file(content)
+
                             case _:
                                 raise ValueError
                         

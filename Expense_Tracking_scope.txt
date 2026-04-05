@@ -1,7 +1,4 @@
 Current effort:
-- Saving weekly records to txt files
-- Logging individual data record
-- Deal with more entry error
 - Add feature to edit the expenses
 - Make UX/UI
 
